@@ -1,0 +1,21 @@
+using System.Security.Cryptography;
+using System.Text;
+using PMO.Platform.Application.Common.Interfaces.Security;
+
+namespace PMO.Platform.Infrastructure.Authentication;
+
+public sealed class Sha256PasswordHasher : IPasswordHasher
+{
+    public string Hash(string value)
+    {
+        var bytes = Encoding.UTF8.GetBytes(value);
+        using var sha = SHA256.Create();
+        var hash = sha.ComputeHash(bytes);
+        return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    public bool Verify(string value, string hash)
+    {
+        return string.Equals(Hash(value), hash, StringComparison.OrdinalIgnoreCase);
+    }
+}

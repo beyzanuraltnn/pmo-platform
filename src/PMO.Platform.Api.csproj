@@ -1,0 +1,63 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using PMO.Platform.Api.Common.Responses;
+using PMO.Platform.Application.Common.Interfaces.Services;
+using PMO.Platform.Infrastructure.Common.Interfaces;
+
+namespace PMO.Platform.Api.Controllers;
+
+[ApiController]
+[Authorize]
+[Route("api/[controller]")]
+public sealed class NotificationsController(
+    INotificationService notificationService,
+    ICurrentUserService currentUserService) : ControllerBase
+{
+    [HttpGet]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetNotifications(CancellationToken cancellationToken)
+    {
+        var userId = currentUserService.GetCurrentUserId();
+
+        if (!userId.HasValue)
+        {
+            return Unauthorized(ApiResponse.Fail("Kullanıcı doğrulanamadı."));
+        }
+
+        var notifications = await notificationService.GetNotificationsAsync(userId.Value, cancellationToken);
+        Response.Headers["X-Unread-Count"] = notifications.Count(x => x.Unread).ToString();
+        return Ok(ApiResponse.Ok("Bildirimler getirildi.", notifications));
+    }
+
+    [HttpPut("{id:guid}/read")]
+    public async Task<IActionResult> MarkAsRead(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = currentUserService.GetCurrentUserId();
+
+        if (!userId.HasValue)
+        {
+            return Unauthorized(ApiResponse.Fail("Kullanıcı doğrulanamadı."));
+        }
+
+        var updated = await notificationService.MarkAsReadAsync(id, userId.Value, cancellationToken);
+
+        return updated
+            ? Ok(ApiResponse.Ok("Bildirim okundu olarak işaretlendi."))
+            : NotFound(ApiResponse.Fail("Bildirim bulunamadı."));
+    }
+
+    [HttpPut("read-all")]
+    public async Task<IActionResult> MarkAllAsRead(CancellationToken cancellationToken)
+    {
+        var userId = currentUserService.GetCurrentUserId();
+
+        if (!userId.HasValue)
+        {
+            return Unauthorized(ApiResponse.Fail("Kullanıcı doğrulanamadı."));
+        }
+
+        var count = await notificationService.MarkAllAsReadAsync(userId.Value, cancellationToken);
+        return Ok(ApiResponse.Ok("Tüm bildirimler okundu olarak işaretlendi.", new { count }));
+    }
+}

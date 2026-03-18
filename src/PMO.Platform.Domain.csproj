@@ -1,0 +1,10 @@
+namespace PMO.Platform.Application.Notifications;
+
+public sealed class NotificationItemDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Body { get; set; } = string.Empty;
+    public string Time { get; set; } = string.Empty;
+    public bool Unread { get; set; }
+}
